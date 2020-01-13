@@ -9,20 +9,29 @@ img_dir     = 'val2017/'
 
 
 
-def edge(cutout_img):
-    img = cutout_img.copy()
+def edge(img):
+    img = img.copy()
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     cv2.merge((gray, gray, gray), img)
     
     kernel = np.ones((4,4),np.uint8)
-    dilation = cv2.dilate(img,kernel,iterations = 1)
+    dilation = cv2.dilate(img, kernel, iterations = 1)
     
     diff = cv2.subtract(dilation, img)
     
     negaposi = 255 - diff
 
     return negaposi
+
+
+def binarization(img):
+    # 閾値の設定
+    threshold = 150
+    # 二値化(閾値100を超えた画素を255にする。)
+    ret, img_thresh = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
+    return img_thresh
     
+
 if __name__ == "__main__":
     coco    = COCO(os.path.join(data_dir, ann_file))
     image_files = sorted(os.listdir(os.path.join(data_dir, img_dir)))
@@ -55,6 +64,7 @@ if __name__ == "__main__":
     cutout_img[gray_mask==0] = [255, 255, 255]  # マスク画像の明度 0 の画素を白色（R:255 G:255 B:255）で塗りつぶす
 
     output_img = edge(cutout_img)
+    # output_img = binarization(cutout_img)
     # cv2.namedWindow('org')
     # cv2.imshow('org', org_img)
     # cv2.namedWindow('mask')
