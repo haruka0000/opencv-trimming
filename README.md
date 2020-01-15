@@ -9,9 +9,9 @@ pip install cython
 ```
 ```
 git clone https://github.com/cocodataset/cocoapi.git
-cd cocoapi/PythonAPI`
-python setup.py install`
+cd cocoapi/PythonAPI
+python setup.py install
 ```
 ```
-pip install opencv-python`
+pip install opencv-python
 ```
