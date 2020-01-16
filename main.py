@@ -3,9 +3,9 @@ import numpy as np
 import cv2
 from pycocotools.coco import COCO
 
-data_dir    = 'data'
-ann_file    = 'annotations_trainval2017/annotations/instances_val2017.json'
-img_dir     = 'val2017/'
+data_dir    = 'data/coco/'
+ann_file    = 'annotations/instances_train2017.json'
+img_dir     = 'images/train2017'
 
 
 
