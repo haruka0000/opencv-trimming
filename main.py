@@ -59,6 +59,30 @@ def deleteBG(img_data):
 
     return cutout_img
 
+
+
+def replaceCharcter(img_data):
+    ann_ids     = coco.getAnnIds(imgIds=img_data['id'], iscrowd=None)
+    anns        = coco.loadAnns(ann_ids)
+    cats        = coco.loadCats(coco.getCatIds())
+    
+    # print(cats)
+    for ann in anns:
+        cat = [ cat for cat in cats if cat['id'] == ann["category_id"] ][0]
+        if cat["supercategory"] == "person":
+            for seg in ann['bbox']:
+                print( seg, " ", end="" )
+
+            ann_width   = ann['bbox'][2] - ann['bbox'][0]
+            ann_height  = ann['bbox'][3] - ann['bbox'][1]
+            c_x         = ann['bbox'][0] + ann_width / 2
+            c_y         = ann['bbox'][1] + ann_height / 2
+            
+            print( "c_x=", c_x, "\t c_y=", c_y)
+            print( "width=", ann_width, "\t heigth=", ann_height )
+        
+
+
 if __name__ == "__main__":
     coco    = COCO(os.path.join(data_dir, ann_file))
     image_files = sorted(os.listdir(os.path.join(data_dir, img_dir)))
