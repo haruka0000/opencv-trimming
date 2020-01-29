@@ -6,7 +6,7 @@ from pycocotools.coco import COCO
 data_dir    = 'data/coco/'
 ann_file    = 'annotations/instances_train2017.json'
 img_dir     = 'images/train2017'
-
+output_dir  = 'data/coco_edge'
 
 
 def edge(img):
@@ -64,26 +64,30 @@ if __name__ == "__main__":
     image_files = sorted(os.listdir(os.path.join(data_dir, img_dir)))
 
     img_ids     = [int(img_file.split('.')[0]) for img_file in image_files]
-    img_data    = coco.loadImgs(img_ids[np.random.randint(0,len(img_ids))])[0]
-    
-    # 画像の読み込み
-    org_img = cv2.imread(os.path.join(data_dir, img_dir, img_data['file_name']))
 
-    # cutout_img = deleteBG(img_data)
-    output_img = edge(org_img)
+    for idx, img_id in enumerate(img_ids):
+        # img_data    = coco.loadImgs(img_ids[np.random.randint(0,len(img_ids))])[0]
+        img_data    = coco.loadImgs(img_id)[0]
+        
+        # 画像の読み込み
+        org_img = cv2.imread(os.path.join(data_dir, img_dir, img_data['file_name']))
 
-    # output_img = binarization(cutout_img)
-    # cv2.namedWindow('org')
-    # cv2.imshow('org', org_img)
-    # cv2.namedWindow('mask')
-    # cv2.imshow('mask', mask_img)
-    cv2.namedWindow('cutout')
-    cv2.imshow('cutout', org_img)
-    cv2.imwrite('original.jpg', org_img)
+        # cutout_img = deleteBG(img_data)
+        output_img = edge(org_img)
 
-    cv2.namedWindow('output')
-    cv2.imshow('output', output_img)
-    cv2.imwrite('output.jpg', output_img)
-    
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+        # output_img = binarization(cutout_img)
+        # cv2.namedWindow('org')
+        # cv2.imshow('org', org_img)
+        # cv2.namedWindow('mask')
+        # cv2.imshow('mask', mask_img)
+
+        # cv2.namedWindow('original')
+        # cv2.imshow('original', org_img)
+        # cv2.imwrite('original.jpg', org_img)
+
+        # cv2.namedWindow('output')
+        # cv2.imshow('output', output_img)
+        cv2.imwrite(os.path.join(output_dir, str(img_id).zfill(12) + ".jpg"), output_img)
+        print(str(idx+1).rjust(20), "/", len(img_ids))
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
