@@ -1,11 +1,19 @@
 import os
+import platform
 import numpy as np
 import cv2
 from pycocotools.coco import COCO
 
-data_dir    = 'data'
-ann_file    = 'annotations_trainval2017/annotations/instances_val2017.json'
-img_dir     = 'val2017/'
+pf = platform.system()
+
+data_dir    = 'data/coco'
+ann_file    = 'annotations/instances_val2017.json'
+img_dir     = 'images/val2017'
+if pf == 'Windows':
+    data_dir    = os.path.join(*data_dir.split("/"))
+    ann_file    = os.path.join(*ann_file.split("/"))
+    img_dir     = os.path.join(*img_dir.split("/"))
+
 
 
 
@@ -59,13 +67,41 @@ def deleteBG(img_data):
 
     return cutout_img
 
+
+def replaceCharcter(img_data):
+    ann_ids     = coco.getAnnIds(imgIds=img_data['id'], iscrowd=None)
+    anns        = coco.loadAnns(ann_ids)
+    cats        = coco.loadCats(coco.getCatIds())
+    
+    # print(cats)
+    for ann in anns:
+        cat = [ cat for cat in cats if cat['id'] == ann["category_id"] ][0]
+        if cat["supercategory"] == "person":
+            for seg in ann['bbox']:
+                print( seg, " ", end="" )
+
+            ann_width   = ann['bbox'][2] - ann['bbox'][0]
+            ann_height  = ann['bbox'][3] - ann['bbox'][1]
+            c_x         = ann['bbox'][0] + ann_width / 2
+            c_y         = ann['bbox'][1] + ann_height / 2
+            
+            print( "c_x=", c_x, "\t c_y=", c_y)
+            print( "width=", ann_width, "\t heigth=", ann_height )
+        
+
+
+
+
 if __name__ == "__main__":
     coco    = COCO(os.path.join(data_dir, ann_file))
     image_files = sorted(os.listdir(os.path.join(data_dir, img_dir)))
 
     img_ids     = [int(img_file.split('.')[0]) for img_file in image_files]
-    img_data    = coco.loadImgs(img_ids[np.random.randint(0,len(img_ids))])[0]
+    chosen_id   = img_ids[np.random.randint(0,len(img_ids))]
+    img_data    = coco.loadImgs(chosen_id)[0]
     
+    replaceCharcter(img_data)
+    """
     # 画像の読み込み
     org_img = cv2.imread(os.path.join(data_dir, img_dir, img_data['file_name']))
 
@@ -87,3 +123,4 @@ if __name__ == "__main__":
     
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    """
