@@ -3,12 +3,15 @@ import numpy as np
 import cv2
 from pycocotools.coco import COCO
 import dlib
+from PIL import Image
 
 data_dir    = 'data/coco/'
 ann_file    = 'annotations/instances_train2017.json'
 img_dir     = 'images/train2017'
+face_dir    = 'data/characters'
 output_dir  = 'data/samples'
 
+detector = dlib.get_frontal_face_detector()
 
 def edge(img):
     img = img.copy()
@@ -79,30 +82,64 @@ def checkHuman(img_data):
         return None
 
 
-def replaceCharcter(org_img, human_anns, mode="replace"):
-    org_img = org_img.copy()
+def replaceCharcter(org_img, human_anns, mode="replace", erase=False):
+    output_img = org_img.copy()
+    faces = detector(output_img, 0)
 
     for ann in human_anns:
         cat = [ cat for cat in cats if cat['id'] == ann["category_id"] ][0] # このアノテーションのスーパーカテゴリ
         
         if cat["supercategory"] == "person":
             for seg in ann['segmentation']:
-                if type(seg) == list:   # 多人数の場合は別形式で扱われるため
-                    poly = np.array(seg).reshape((int(len(seg)/2), 2)).reshape((-1,1,2)).astype(np.int32)
-                    
-                    # 白埋め
-                    cv2.fillPoly(org_img, pts=[poly], color=(255, 255, 255))
-            
+                if erase:
+                    if type(seg) == list:   # 多人数の場合は別形式で扱われるため
+                        poly = np.array(seg).reshape((int(len(seg)/2), 2)).reshape((-1,1,2)).astype(np.int32)
+                        
+                        # 白埋め
+                        cv2.fillPoly(output_img, pts=[poly], color=(255, 255, 255))
+                
             if mode == "replace":
                 ann_width   = ann['bbox'][2] - ann['bbox'][0]
                 ann_height  = ann['bbox'][3] - ann['bbox'][1]
                 c_x         = ann['bbox'][0] + ann_width / 2
                 c_y         = ann['bbox'][1] + ann_height / 2
 
+            if mode == "face":
+                print(faces)
+                for face in faces:
+                    x1, y1, x2, y2  = face.left(), face.top(), face.right(), face.bottom()
 
-            # print( "c_x=", c_x, "\t c_y=", c_y)
-            # print( "width=", ann_width, "\t heigth=", ann_height )
-    return org_img
+                    face_width  = int( face.width() )
+                    face_height = int( face.height() )
+                    # 画像の読み込み -1を付けることでアルファチャンネル
+                    cface_img = cv2.imread(
+                        os.path.join(
+                            face_dir, 
+                            "man_face.png" ), -1 )
+
+                    # 顔サイズにリサイズ
+                    cface_img = cv2.resize( cface_img, ( face_width, face_height ) )
+                    
+                    # 背景(org_img)をPIL形式に変換
+                    src     = cv2.cvtColor(output_img, cv2.COLOR_BGR2RGB)
+                    pil_src = Image.fromarray(src)
+                    pil_src = pil_src.convert('RGBA')
+
+                    # オーバーレイ(cface_img)をPIL形式に変換
+                    overlay     = cv2.cvtColor(cface_img, cv2.COLOR_BGRA2RGBA)
+                    pil_overlay = Image.fromarray(overlay)
+                    pil_overlay = pil_overlay.convert('RGBA')
+
+                    # 画像を合成
+                    pil_tmp         = Image.new( 'RGBA', pil_src.size, (255, 255, 255, 0) )
+                    pil_tmp.paste( pil_overlay, (x1, y1), pil_overlay )
+                    result_image    = Image.alpha_composite(pil_src, pil_tmp)
+
+                    # OpenCV形式に変換
+                    output_img  = cv2.cvtColor( np.asarray( result_image ), cv2.COLOR_RGBA2BGRA )
+                    output_img  = cv2.cvtColor( output_img, cv2.COLOR_BGRA2BGR )
+
+    return output_img
 
 
         
@@ -115,27 +152,23 @@ if __name__ == "__main__":
     image_files = sorted(os.listdir(os.path.join(data_dir, img_dir)))
 
     # img_ids     = [int(img_file.split('.')[0]) for img_file in image_files]
-    img_ids     = [int(img_file.split('.')[0]) for img_file in image_files][0:20]   # To develoment
+    img_ids     = [int(img_file.split('.')[0]) for img_file in image_files][0:3]   # To develoment
 
     for idx, img_id in enumerate(img_ids):
         # img_data    = coco.loadImgs(img_ids[np.random.randint(0,len(img_ids))])[0]     # To develoment
         img_data    = coco.loadImgs(img_id)[0]
-        
+        print(img_data["file_name"])
         # 画像の読み込み
         org_img = cv2.imread(os.path.join(data_dir, img_dir, img_data['file_name']))
 
-        """
+        
         if checkHuman( img_data ):
             human_anns   = checkHuman( img_data )
-            output_img  = replaceCharcter( org_img, human_anns )
+            output_img  = replaceCharcter( org_img, human_anns, mode="face" )
         else: 
             output_img  = org_img
             print(" No Human. ")
-        """
-        output_img  = org_img
-        detector = dlib.get_frontal_face_detector()
-        faces = detector(output_img, 0)
-        print(faces)
+        
         # cutout_img = deleteBG(img_data)
         # output_img = edge(org_img)
 
@@ -157,3 +190,4 @@ if __name__ == "__main__":
         
         cv2.waitKey(0)
         cv2.destroyAllWindows()
+        
