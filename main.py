@@ -1,9 +1,16 @@
 import os
 import numpy as np
 import cv2
+import itertools
 from pycocotools.coco import COCO
 import dlib
 from PIL import Image
+import my_filter
+import matplotlib
+# こっちに変更↓
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
+
 
 data_dir    = 'data/coco/'
 ann_file    = 'annotations/instances_train2017.json'
@@ -12,29 +19,6 @@ face_dir    = 'data/characters'
 output_dir  = 'data/samples'
 
 detector = dlib.get_frontal_face_detector()
-
-def edge(img):
-    img = img.copy()
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    cv2.merge((gray, gray, gray), img)
-    
-    kernel = np.ones((3,3),np.uint8)
-    dilation = cv2.dilate(img, kernel, iterations = 1)
-    
-    diff = cv2.subtract(dilation, img)
-    
-    negaposi = 255 - diff
-
-    return negaposi
-
-
-def binarization(img):
-    # 閾値の設定
-    threshold = 150
-    # 二値化(閾値100を超えた画素を255にする。)
-    ret, img_thresh = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
-    return img_thresh
-
 
 def deleteBG(img_data):
     ann_ids     = coco.getAnnIds(imgIds=img_data['id'], iscrowd=None)
@@ -142,7 +126,9 @@ def replaceCharcter(org_img, human_anns, mode="replace", erase=False):
     return output_img
 
 
-        
+
+
+    
 
 
 if __name__ == "__main__":
@@ -161,14 +147,58 @@ if __name__ == "__main__":
         # 画像の読み込み
         org_img = cv2.imread(os.path.join(data_dir, img_dir, img_data['file_name']))
 
+        # 人物処理
+        # if checkHuman( img_data ):
+        #     human_anns   = checkHuman( img_data )
+        #     output_img  = replaceCharcter( org_img, human_anns, mode="face" )
+        # else: 
+        #     output_img  = org_img
+        #     print(" No Human. ")
+
+        # 比較
+        params  = {
+            "sigma" : [1],
+            "eps"   : [110],
+            "phi"   : [5, 10],
+            "p"     : [1]# [1, 5]
+        }
+        params  = list(itertools.product(*list(params.values())))
+        # print(params)
+        # plt.figure(figsize=(6,6) ,dpi=200)
+        for i, (sigma, eps, phi, p) in enumerate(params, 1):
+            plt.figure(figsize=(3,3) ,dpi=200)
+            # output_img  = my_filter.p_xDoG(
+            #     org_img, 
+            #     size    = 3, 
+            #     sigma   = sigma, 
+            #     eps     = eps, 
+            #     phi     = phi,
+            #     p       = p
+            # )
+            output_img  = my_filter.xDoG(
+                org_img, 
+                size    = 3, 
+                sigma   = sigma, 
+                eps     = eps, 
+                phi     = phi,
+            )
+            # plt.subplot(int(len(params)/3)+1, 3, i)
+            plt.imshow(output_img, cmap='Greys_r')
+            plt.axis('off')
+            # タイトルを設定する。
+            title = "sigma=%s eps=%s\nphi=%s p=%s" % (
+                str(sigma), 
+                str(eps), 
+                str(phi),
+                str(p)
+            )
+            plt.title( title, fontsize=6 )
+            plt.show()
+
+        # plt.show()
         
-        if checkHuman( img_data ):
-            human_anns   = checkHuman( img_data )
-            output_img  = replaceCharcter( org_img, human_anns, mode="face" )
-        else: 
-            output_img  = org_img
-            print(" No Human. ")
-        
+        # output_img  = my_filter.edge(output_img)
+        # output_img  = cv2.medianBlur(np.float32(output_img), 3)
         # cutout_img = deleteBG(img_data)
         # output_img = edge(org_img)
 
@@ -182,12 +212,12 @@ if __name__ == "__main__":
         # cv2.imshow('original', org_img)
         # cv2.imwrite('original.jpg', org_img)
 
-        cv2.namedWindow('output')
-        cv2.imshow('output', output_img)
+        # cv2.namedWindow('output')
+        # cv2.imshow('output', output_img)
 
         # cv2.imwrite(os.path.join(output_dir, str(img_id).zfill(12) + ".jpg"), output_img)
         print(str(idx+1).rjust(20), "/", len(img_ids))
         
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         
