@@ -13,5 +13,5 @@ cd cocoapi/PythonAPI
 python setup.py install
 ```
 ```
-pip install opencv-python
+pip install opencv-python pillow
 ```

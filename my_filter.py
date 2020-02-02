@@ -5,7 +5,7 @@ import numpy as np
 ###########################
 # エッジ抽出
 ###########################
-def edge(img):
+def edge(img, ksize=3):
     img = img.copy()
 
     gray = img
@@ -15,7 +15,7 @@ def edge(img):
 
     cv2.merge((gray, gray, gray), img)
     
-    kernel = np.ones((3,3),np.uint8)
+    kernel = np.ones((ksize,ksize),np.uint8)
     dilation = cv2.dilate(img, kernel, iterations = 1)
     
     diff = cv2.subtract(dilation, img)
@@ -25,15 +25,17 @@ def edge(img):
     return negaposi
 
 
-
+def laplacian(img, ksize=3):
+    if len(img.shape) == 3:
+        # グレースケール変換
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    return cv2.Laplacian(img, cv2.CV_32F, ksize=ksize)
 
     
 ###########################
 # 二値化
 ###########################
-def binarization(img):
-    # 閾値の設定
-    threshold = 150
+def binarization(img, threshold=120):
     # 二値化(閾値100を超えた画素を255にする。)
     ret, img_thresh = cv2.threshold(img, threshold, 255, cv2.THRESH_BINARY)
     return img_thresh
@@ -44,14 +46,14 @@ def binarization(img):
 # DoG フィルタ
 ###########################
 # ガウシアン差分フィルタリング
-def DoG(img, size, sigma, k=1.6, gamma=1):
+def DoG(img, ksize=3, sigma=1, k=1.6, gamma=1):
     img = img.copy()
     gray = img
     if len(img.shape) == 3:
         # グレースケール変換
         gray    = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    g1 = cv2.GaussianBlur(gray, (size, size), sigma)
-    g2 = cv2.GaussianBlur(gray, (size, size), sigma*k)
+    g1 = cv2.GaussianBlur(gray, (ksize, ksize), sigma)
+    g2 = cv2.GaussianBlur(gray, (ksize, ksize), sigma*k)
     return g1 - gamma*g2
 
 # 閾値で白黒化するDoG

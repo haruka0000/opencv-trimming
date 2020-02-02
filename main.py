@@ -2,6 +2,7 @@ import os
 import numpy as np
 import cv2
 import itertools
+import argparse
 from pycocotools.coco import COCO
 import dlib
 from PIL import Image
@@ -12,11 +13,6 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
 
-data_dir    = 'data/coco/'
-ann_file    = 'annotations/instances_train2017.json'
-img_dir     = 'images/train2017'
-face_dir    = 'data/characters'
-output_dir  = 'data/samples'
 
 detector = dlib.get_frontal_face_detector()
 
@@ -25,7 +21,7 @@ def deleteBG(img_data):
     anns        = coco.loadAnns(ann_ids)
 
     # 画像の読み込み
-    org_img = cv2.imread(os.path.join(data_dir, img_dir, img_data['file_name']))
+    org_img = cv2.imread(os.path.join(img_dir, img_data['file_name']))
     # 画像の大きさを取得
     height, width, channels = org_img.shape[:3]
 
@@ -127,25 +123,72 @@ def replaceCharcter(org_img, human_anns, mode="replace", erase=False):
 
 
 
+def check_params(params, org_img):
+    params  = list(itertools.product(*list(params.values())))
+    # print(params)
+    plt.figure(figsize=(6,6) ,dpi=200)
+    for i, (sigma, eps, phi, p) in enumerate(params, 1):
+        # plt.figure(figsize=(3,3) ,dpi=200)
+        # output_img  = my_filter.p_xDoG(
+        #     org_img, 
+        #     size    = 3, 
+        #     sigma   = sigma, 
+        #     eps     = eps, 
+        #     phi     = phi,
+        #     p       = p
+        # )
+        output_img  = my_filter.xDoG(
+            org_img, 
+            size    = 3, 
+            sigma   = sigma, 
+            eps     = eps, 
+            phi     = phi,
+        )
+        plt.subplot(int(len(params)/3)+1, 3, i)
+        plt.imshow(output_img, cmap='Greys_r')
+        plt.axis('off')
+        # タイトルを設定する。
+        title = "sigma=%s eps=%s\nphi=%s p=%s" % (
+            str(sigma), 
+            str(eps), 
+            str(phi),
+            str(p)
+        )
+        plt.title( title, fontsize=6 )
+        # plt.show()
 
+    plt.show()
     
 
 
 if __name__ == "__main__":
-    coco    = COCO(os.path.join(data_dir, ann_file))
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output_path', type=str, default='data/output' , help='path for saving images')
+    parser.add_argument('--anns_path', type=str, default='data/coco/annotations/instances_train2017.json' , help='path of annotations')
+    parser.add_argument('--imgs_path', type=str, default='data/coco/images/train2017' , help='path of images')
+    parser.add_argument('--faces_path', type=str, default='data/characters' , help='path of faces')
+    args = parser.parse_args()
+
+    ann_file    = args.anns_path
+    img_dir     = args.imgs_path
+    face_dir    = args.faces_path
+    output_dir  = args.output_path
+    os.makedirs(output_dir)
+    
+    coco    = COCO(ann_file)
     cats        = coco.loadCats(coco.getCatIds())
 
-    image_files = sorted(os.listdir(os.path.join(data_dir, img_dir)))
+    image_files = sorted(os.listdir(img_dir))
 
-    # img_ids     = [int(img_file.split('.')[0]) for img_file in image_files]
-    img_ids     = [int(img_file.split('.')[0]) for img_file in image_files][0:3]   # To develoment
+    img_ids     = [int(img_file.split('.')[0]) for img_file in image_files]
+    # img_ids     = [int(img_file.split('.')[0]) for img_file in image_files][0:6]   # To develoment
 
     for idx, img_id in enumerate(img_ids):
         # img_data    = coco.loadImgs(img_ids[np.random.randint(0,len(img_ids))])[0]     # To develoment
         img_data    = coco.loadImgs(img_id)[0]
         print(img_data["file_name"])
         # 画像の読み込み
-        org_img = cv2.imread(os.path.join(data_dir, img_dir, img_data['file_name']))
+        org_img = cv2.imread(os.path.join(img_dir, img_data['file_name']))
 
         # 人物処理
         # if checkHuman( img_data ):
@@ -156,68 +199,31 @@ if __name__ == "__main__":
         #     print(" No Human. ")
 
         # 比較
+        '''
         params  = {
             "sigma" : [1],
             "eps"   : [110],
             "phi"   : [5, 10],
             "p"     : [1]# [1, 5]
         }
-        params  = list(itertools.product(*list(params.values())))
-        # print(params)
-        # plt.figure(figsize=(6,6) ,dpi=200)
-        for i, (sigma, eps, phi, p) in enumerate(params, 1):
-            plt.figure(figsize=(3,3) ,dpi=200)
-            # output_img  = my_filter.p_xDoG(
-            #     org_img, 
-            #     size    = 3, 
-            #     sigma   = sigma, 
-            #     eps     = eps, 
-            #     phi     = phi,
-            #     p       = p
-            # )
-            output_img  = my_filter.xDoG(
-                org_img, 
-                size    = 3, 
-                sigma   = sigma, 
-                eps     = eps, 
-                phi     = phi,
-            )
-            # plt.subplot(int(len(params)/3)+1, 3, i)
-            plt.imshow(output_img, cmap='Greys_r')
-            plt.axis('off')
-            # タイトルを設定する。
-            title = "sigma=%s eps=%s\nphi=%s p=%s" % (
-                str(sigma), 
-                str(eps), 
-                str(phi),
-                str(p)
-            )
-            plt.title( title, fontsize=6 )
-            plt.show()
-
-        # plt.show()
-        
-        # output_img  = my_filter.edge(output_img)
+        '''
+        # check_params(params, org_img)
+        # output_img  = my_filter.laplacian(org_img)
+        cutout_img  = deleteBG(img_data) 
+        output_img  = my_filter.edge(cutout_img)
         # output_img  = cv2.medianBlur(np.float32(output_img), 3)
-        # cutout_img = deleteBG(img_data)
-        # output_img = edge(org_img)
+        # output_img  = 255 - my_filter.DoG(org_img, sigma=0.8)
+        # cv2.imwrite('cutout_edge_' + str(idx) + '.jpg', cutout_edge_img)
+        # cv2.imwrite('cutout_edge_bin_' + str(idx) + '.jpg', cutout_edge_img_bin)
 
-        # output_img = binarization(cutout_img)
-        # cv2.namedWindow('org')
-        # cv2.imshow('org', org_img)
-        # cv2.namedWindow('mask')
-        # cv2.imshow('mask', mask_img)
-
-        # cv2.namedWindow('original')
-        # cv2.imshow('original', org_img)
-        # cv2.imwrite('original.jpg', org_img)
-
-        # cv2.namedWindow('output')
-        # cv2.imshow('output', output_img)
-
-        # cv2.imwrite(os.path.join(output_dir, str(img_id).zfill(12) + ".jpg"), output_img)
+        
+        cv2.imwrite(os.path.join(output_dir, str(img_id).zfill(12) + ".jpg"), output_img)
+        
         print(str(idx+1).rjust(20), "/", len(img_ids))
         
+        
+        
+        # cv2.namedWindow('output')
+        # cv2.imshow('output', output_img)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
-        
